@@ -34,6 +34,7 @@ defmodule Asciinema.Streaming.Stream do
     field :schedule, Crontab.CronExpression.Ecto.Type
     field :next_start_at, :utc_datetime
     field :offline_grace_period, :integer
+    field :tags, {:array, :string}, default: []
 
     timestamps(type: :utc_datetime)
 

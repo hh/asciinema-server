@@ -90,6 +90,16 @@ defmodule Asciinema.StreamingTest do
                Streaming.create_stream(user, %{live: true})
     end
 
+    test "tags" do
+      user = insert(:user)
+
+      assert {:ok, stream} = Streaming.create_stream(user)
+      assert %Stream{tags: []} = stream
+
+      assert {:ok, stream} = Streaming.create_stream(user, %{tags: ["tutorial", "python"]})
+      assert %Stream{tags: ["tutorial", "python"]} = stream
+    end
+
     test "live stream limit race" do
       # This test ensures the PostgreSQL trigger prevents race conditions
       # when multiple processes try to create live streams simultaneously
@@ -160,6 +170,16 @@ defmodule Asciinema.StreamingTest do
                })
 
       assert %{visibility: _, term_theme_name: _} = errors_on(changeset)
+    end
+
+    test "tags" do
+      stream = insert(:stream, tags: [])
+
+      assert {:ok, stream} = Streaming.update_stream(stream, %{tags: ["rust", "cli"]})
+      assert %Stream{tags: ["rust", "cli"]} = stream
+
+      assert {:ok, stream} = Streaming.update_stream(stream, %{tags: []})
+      assert %Stream{tags: []} = stream
     end
 
     test "invalid schedule" do

@@ -197,6 +197,7 @@ defmodule Asciinema.Streaming do
       :env,
       :live,
       :shell,
+      :tags,
       :term_font_family,
       :term_line_height,
       :term_theme_name,

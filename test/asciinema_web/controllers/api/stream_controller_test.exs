@@ -351,6 +351,13 @@ defmodule AsciinemaWeb.Api.StreamControllerTest do
                "message" => "Maximum 2 live streams reached"
              } = json_response(conn, 422)
     end
+
+    @tag user: [streaming_enabled: true]
+    test "succeeds with tags", %{conn: conn} do
+      conn = post(conn, ~p"/api/v1/streams", %{"tags" => ["tutorial", "python"]})
+
+      assert %{"id" => _, "tags" => ["tutorial", "python"]} = json_response(conn, 200)
+    end
   end
 
   describe "update without authentication" do
@@ -501,6 +508,14 @@ defmodule AsciinemaWeb.Api.StreamControllerTest do
                "type" => "live_stream_limit_reached",
                "message" => "Maximum 2 live streams reached"
              } = json_response(conn, 422)
+    end
+
+    test "succeeds when updating tags", %{conn: conn, cli: cli} do
+      stream = insert(:stream, user: cli.user, tags: [])
+
+      conn = put(conn, ~p"/api/v1/streams/#{stream.id}", %{"tags" => ["rust", "cli"]})
+
+      assert %{"id" => _, "tags" => ["rust", "cli"]} = json_response(conn, 200)
     end
 
     test "fails when stream is not found", %{conn: conn} do
