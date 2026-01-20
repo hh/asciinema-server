@@ -258,7 +258,7 @@ if config_env() in [:prod, :dev] do
 
   mode = env.("STREAM_RECORDING")
 
-  if mode in ["forced", "allowed", "disabled"] do
+  if mode in ["forced", "allowed", "disabled", "dvr"] do
     config :asciinema, Asciinema.Streaming.StreamServer, recording: String.to_atom(mode)
   end
 

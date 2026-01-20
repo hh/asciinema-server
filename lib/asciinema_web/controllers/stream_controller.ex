@@ -3,11 +3,12 @@ defmodule AsciinemaWeb.StreamController do
   import AsciinemaWeb.Plug.ReturnTo
   alias Asciinema.Authorization
   alias Asciinema.{Authorization, Recordings, Streaming}
+  alias Asciinema.Streaming.StreamServer
   alias AsciinemaWeb.{FallbackController, StreamHTML, PlayerOpts}
   alias Ecto.Changeset
 
   plug :require_current_user when action in [:index, :create, :edit, :update, :delete]
-  plug :load_and_authorize_stream when action in [:show, :edit, :update, :delete]
+  plug :load_and_authorize_stream when action in [:show, :edit, :update, :delete, :cast]
   plug :check_streaming_enabled when action in [:index, :edit, :update, :start]
 
   def index(conn, params) do
@@ -133,6 +134,27 @@ defmodule AsciinemaWeb.StreamController do
         conn
         |> put_flash(:error, "Couldn't remove this stream.")
         |> redirect(to: params["ret"] || ~p"/s/#{stream}")
+    end
+  end
+
+  @doc """
+  DVR: Returns the in-progress live recording as a .cast file.
+  Only available when STREAM_RECORDING=dvr is enabled.
+  """
+  def cast(conn, _params) do
+    stream = conn.assigns.stream
+
+    case StreamServer.live_recording_path(stream) do
+      nil ->
+        # DVR not enabled or no recording available
+        FallbackController.call(conn, {:error, :not_found})
+
+      path ->
+        conn
+        |> put_resp_header("access-control-allow-origin", "*")
+        |> put_resp_header("content-type", "application/x-asciicast")
+        |> put_resp_header("cache-control", "no-cache")
+        |> send_file(200, path)
     end
   end
 

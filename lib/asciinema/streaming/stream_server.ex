@@ -75,7 +75,8 @@ defmodule Asciinema.Streaming.StreamServer do
       path: nil,
       writer: nil,
       shutdown_timer: nil,
-      viewer_count: viewer_count
+      viewer_count: viewer_count,
+      dvr_mode: false
     }
 
     state = reschedule_shutdown(state)
@@ -266,6 +267,30 @@ defmodule Asciinema.Streaming.StreamServer do
 
   def recording_mode, do: config(:recording, :allowed)
 
+  @doc """
+  Returns the path to a live DVR recording for the given stream.
+  Returns nil if DVR mode is not enabled or the file doesn't exist.
+  """
+  def live_recording_path(stream) do
+    if recording_mode() == :dvr do
+      live_dir =
+        Path.join([
+          Application.get_env(:asciinema, :uploads_path, "uploads"),
+          "live"
+        ])
+
+      path = Path.join(live_dir, "#{stream.id}.cast")
+
+      if File.exists?(path) do
+        path
+      else
+        nil
+      end
+    else
+      nil
+    end
+  end
+
   # Private
 
   defp via_tuple(stream_id),
@@ -328,7 +353,7 @@ defmodule Asciinema.Streaming.StreamServer do
     mode = recording_mode()
     user = state.stream.user
 
-    if mode == :forced or (mode == :allowed && user.stream_recording_enabled) do
+    if mode in [:forced, :dvr] or (mode == :allowed && user.stream_recording_enabled) do
       create_asciicast_file(
         state,
         cols,
@@ -360,9 +385,14 @@ defmodule Asciinema.Streaming.StreamServer do
     }
 
     {:ok, _} = Recordings.create_asciicast(state.stream.user, upload, fields)
-    File.rm(state.path)
 
-    %{state | path: nil, writer: nil}
+    # Only delete temp files in non-DVR mode
+    # DVR files are retained and cleaned up by DeleteOldDvrRecordings worker
+    unless state.dvr_mode do
+      File.rm(state.path)
+    end
+
+    %{state | path: nil, writer: nil, dvr_mode: false}
   end
 
   defp create_asciicast_file(
@@ -372,11 +402,25 @@ defmodule Asciinema.Streaming.StreamServer do
          term_init,
          theme
        ) do
-    path = Briefly.create!()
+    mode = recording_mode()
+    dvr_mode = mode == :dvr
+
+    # DVR mode writes directly to persistent storage with sync
+    path =
+      if dvr_mode do
+        live_path = build_live_recording_path(state.stream)
+        # Archive existing DVR file before starting new session
+        archive_existing_dvr(live_path)
+        live_path
+      else
+        Briefly.create!()
+      end
+
     timestamp = Timex.to_unix(Timex.now())
 
     {:ok, writer} =
       V3.create(path, {cols, rows},
+        sync: dvr_mode,
         term_type: state.stream.term_type,
         term_version: state.stream.term_version,
         term_theme: theme,
@@ -386,11 +430,41 @@ defmodule Asciinema.Streaming.StreamServer do
       )
 
     if term_init in [nil, ""] do
-      %{state | path: path, writer: writer}
+      %{state | path: path, writer: writer, dvr_mode: dvr_mode}
     else
       {:ok, writer} = V3.write_event(writer, 0, "o", term_init)
 
-      %{state | path: path, writer: writer}
+      %{state | path: path, writer: writer, dvr_mode: dvr_mode}
+    end
+  end
+
+  defp build_live_recording_path(stream) do
+    # Store in uploads/live/{stream_id}.cast
+    live_dir =
+      Path.join([
+        Application.get_env(:asciinema, :uploads_path, "uploads"),
+        "live"
+      ])
+
+    # Ensure directory exists
+    File.mkdir_p!(live_dir)
+
+    Path.join(live_dir, "#{stream.id}.cast")
+  end
+
+  defp archive_existing_dvr(path) do
+    if File.exists?(path) do
+      # Generate archive path with timestamp: {stream_id}_20260114T152746.cast
+      timestamp = Timex.format!(Timex.now(), "{YYYY}{0M}{0D}T{h24}{m}{s}")
+      archive_path = String.replace(path, ".cast", "_#{timestamp}.cast")
+
+      case File.rename(path, archive_path) do
+        :ok ->
+          Logger.info("DVR archive: #{Path.basename(path)} -> #{Path.basename(archive_path)}")
+
+        {:error, reason} ->
+          Logger.warning("DVR archive failed: #{inspect(reason)}")
+      end
     end
   end
 

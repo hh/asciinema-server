@@ -66,6 +66,9 @@ defmodule AsciinemaWeb.Router do
 
     resources "/s", StreamController, only: [:show, :edit, :update, :delete]
 
+    # DVR: Live stream recording download
+    get "/s/:id/cast", StreamController, :cast
+
     resources "/login", LoginController, only: [:new, :create], singleton: true
     get "/login/sent", LoginController, :sent, as: :login
 
