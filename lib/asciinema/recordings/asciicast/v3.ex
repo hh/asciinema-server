@@ -5,7 +5,7 @@ defmodule Asciinema.Recordings.Asciicast.V3 do
 
   defmodule Writer do
     @enforce_keys [:file, :prev_time, :time_quantizer]
-    defstruct [:file, :prev_time, :time_quantizer]
+    defstruct [:file, :prev_time, :time_quantizer, sync: false]
   end
 
   def event_stream(path) when is_binary(path) do
@@ -107,7 +107,10 @@ defmodule Asciinema.Recordings.Asciicast.V3 do
   end
 
   def create(path, {cols, rows}, fields \\ []) do
-    file = File.open!(path, [:write, :utf8])
+    # Add :sync mode for DVR - ensures data hits disk after each write
+    sync = Keyword.get(fields, :sync, false)
+    modes = [:write, :utf8] ++ if(sync, do: [:sync], else: [])
+    file = File.open!(path, modes)
     timestamp = Keyword.get(fields, :timestamp)
     title = Keyword.get(fields, :title)
     env = drop_empty(Keyword.get(fields, :env) || %{})
@@ -129,7 +132,7 @@ defmodule Asciinema.Recordings.Asciicast.V3 do
       |> Jason.OrderedObject.new()
 
     with :ok <- IO.write(file, Jason.encode!(header) <> "\n") do
-      {:ok, %Writer{file: file, prev_time: 0, time_quantizer: Quantizer.new(1_000)}}
+      {:ok, %Writer{file: file, prev_time: 0, time_quantizer: Quantizer.new(1_000), sync: sync}}
     end
   end
 
