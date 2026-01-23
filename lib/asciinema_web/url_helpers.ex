@@ -51,4 +51,12 @@ defmodule AsciinemaWeb.UrlHelpers do
 
     to_string(%{uri | scheme: scheme, path: path})
   end
+
+  def cast_url(stream) do
+    uri = Endpoint.struct_url()
+    param = Phoenix.Param.to_param(stream)
+    path = "/s/#{param}/cast"
+
+    to_string(%{uri | path: path})
+  end
 end

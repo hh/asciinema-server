@@ -3,7 +3,43 @@
   id="cinema"
   style={"height: #{cinema_height(@stream)}vw; max-height: 75vh"}
 >
+  <button id="go-live-btn" class="go-live-btn" style="display: none;" onclick="window.goLive && window.goLive()">
+    <span class="go-live-dot"></span> GO LIVE
+  </button>
 </section>
+
+<style>
+  .go-live-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 8px 16px;
+    background: #ff4757;
+    border: none;
+    border-radius: 4px;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    animation: pulse 2s infinite;
+  }
+  .go-live-btn:hover { background: #ff3344; }
+  .go-live-dot {
+    width: 8px;
+    height: 8px;
+    background: white;
+    border-radius: 50%;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+  #cinema { position: relative; }
+</style>
 
 <section class="even info">
   <div class="container">
@@ -153,6 +189,7 @@
 <script>
   window.addEventListener('load', async function() {
     const container = document.getElementById('cinema');
+    const goLiveBtn = document.getElementById('go-live-btn');
     const opts = <%= safe_json(player_opts(@stream, @player_opts)) %>;
 
     const player = await window.createPlayer(
@@ -160,6 +197,32 @@
       container,
       { ...opts, fit: 'both', logger: console }
     );
+
+    // Expose player globally for DVR controls
+    window.player = player;
+
+    // DVR mode: show/hide GO LIVE button
+    window.goLive = function() {
+      if (player && player.goLive) {
+        player.goLive();
+      }
+    };
+
+    // Poll for DVR mode changes (player.getMode() returns 'live' or 'dvr')
+    let lastMode = null;
+    setInterval(() => {
+      if (player && player.getMode) {
+        const mode = player.getMode();
+        if (mode !== lastMode) {
+          lastMode = mode;
+          if (mode === 'dvr') {
+            goLiveBtn.style.display = 'flex';
+          } else {
+            goLiveBtn.style.display = 'none';
+          }
+        }
+      }
+    }, 200);
 
     player.addEventListener('metadata', ({ size, theme }) => {
       if (size !== undefined) {
