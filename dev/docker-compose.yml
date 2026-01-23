@@ -11,22 +11,20 @@ services:
   postgres:
     image: postgres:14-alpine
     container_name: asciinema_dev_postgres
+    network_mode: host
     environment:
       - POSTGRES_PASSWORD=password
       - POSTGRES_HOST_AUTH_METHOD=trust
-    ports:
-      - 2345:5432
+      - PGPORT=5433
 
-  nginx:
-    image: nginx:alpine
-    container_name: asciinema_dev_nginx
-    links:
-      - phoenix
-    ports:
-      - "3000:80"
-    volumes:
-      - ../docker/nginx/asciinema.conf:/etc/nginx/conf.d/default.conf:ro
-      - cache:/cache
+  # nginx disabled - not needed for testing, causes Pasta networking issues on Silverblue
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: asciinema_dev_nginx
+  #   network_mode: host
+  #   volumes:
+  #     - ../docker/nginx/asciinema.conf:/etc/nginx/conf.d/default.conf:ro
+  #     - cache:/cache
 
   phoenix:
     build:
@@ -34,13 +32,12 @@ services:
       dockerfile: Dockerfile.dev
     image: asciinema/asciinema-server:local
     container_name: asciinema_dev_phoenix
+    network_mode: host
     entrypoint: env -u MIX_ENV -u PORT
     command: mix phx.server
-    links:
+    depends_on:
       - postgres
     env_file: .env.development
-    ports:
-      - 4000:4000
     volumes:
       - ../uploads:/app/uploads:cached
       - node_modules:/app/assets/node_modules:cached

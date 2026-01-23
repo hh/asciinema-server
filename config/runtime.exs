@@ -13,6 +13,7 @@ if env.("PHX_SERVER") do
   config :asciinema, AsciinemaAdmin.Endpoint, server: true
 end
 
+# Apply DATABASE_URL in prod and dev (if provided)
 if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||
@@ -22,6 +23,13 @@ if config_env() == :prod do
       """
 
   config :asciinema, Asciinema.Repo, url: database_url
+end
+
+# In dev, optionally override database config from env
+if config_env() == :dev do
+  if database_url = System.get_env("DATABASE_URL") do
+    config :asciinema, Asciinema.Repo, url: database_url
+  end
 end
 
 if config_env() in [:prod, :dev] do
