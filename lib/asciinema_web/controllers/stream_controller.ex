@@ -161,6 +161,7 @@ defmodule AsciinemaWeb.StreamController do
   defp player_opts(params) do
     params
     |> Map.put_new("showKeys", params["keys"])
+    |> Ext.Map.rename(%{"t" => "startAt"})
     |> PlayerOpts.parse(:stream)
   end
 

@@ -76,7 +76,7 @@ defmodule AsciinemaWeb.PlayerOpts do
   end
 
   def parse(attrs, :stream) do
-    parse(attrs, [:autoplay, :cols, :poster, :rows, :showKeys, :theme])
+    parse(attrs, [:autoplay, :cols, :poster, :rows, :showKeys, :startAt, :theme])
   end
 
   def parse(attrs, fields) when is_list(fields) do
