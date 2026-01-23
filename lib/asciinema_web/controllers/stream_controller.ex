@@ -153,7 +153,7 @@ defmodule AsciinemaWeb.StreamController do
         conn
         |> put_resp_header("access-control-allow-origin", "*")
         |> put_resp_header("content-type", "application/x-asciicast")
-        |> put_resp_header("cache-control", "no-cache")
+        |> put_resp_header("cache-control", "no-store, no-cache, must-revalidate")
         |> send_file(200, path)
     end
   end
