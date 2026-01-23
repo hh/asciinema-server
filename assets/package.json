@@ -6,7 +6,7 @@
     "defaults"
   ],
   "dependencies": {
-    "asciinema-player": "https://gitlab.mcclimans.net/api/v4/projects/asciinema%2Fasciinema-player/packages/generic/asciinema-player/dvr-v0.7/asciinema-player-3.14.0.tgz",
+    "asciinema-player": "https://gitlab.mcclimans.net/api/v4/projects/asciinema%2Fasciinema-player/packages/generic/asciinema-player/dvr-v0.8/asciinema-player-3.14.0.tgz",
     "phoenix": "1.7.6",
     "phoenix_html": "3.3.1",
     "phoenix_live_view": "0.19.3"
