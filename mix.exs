@@ -112,7 +112,7 @@ defmodule Asciinema.MixProject do
       "assets.deploy": [
         "tailwind default --minify",
         "tailwind iframe --minify",
-        "esbuild default --minify",
+        "esbuild default",
         "phx.digest"
       ],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"]
