@@ -159,7 +159,9 @@ defmodule AsciinemaWeb.StreamController do
   end
 
   defp player_opts(params) do
-    PlayerOpts.parse(params, :stream)
+    params
+    |> Map.put_new("showKeys", params["keys"])
+    |> PlayerOpts.parse(:stream)
   end
 
   @actions [:edit, :delete]

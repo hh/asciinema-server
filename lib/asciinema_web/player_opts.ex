@@ -68,6 +68,7 @@ defmodule AsciinemaWeb.PlayerOpts do
     field :startAt, Time
     field :idleTimeLimit, :float
     field :theme, :string
+    field :showKeys, Boolean
   end
 
   def parse(attrs, :recording) do
@@ -75,7 +76,7 @@ defmodule AsciinemaWeb.PlayerOpts do
   end
 
   def parse(attrs, :stream) do
-    parse(attrs, [:autoplay, :cols, :poster, :rows, :theme])
+    parse(attrs, [:autoplay, :cols, :poster, :rows, :showKeys, :theme])
   end
 
   def parse(attrs, fields) when is_list(fields) do
