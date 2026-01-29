@@ -50,9 +50,14 @@ defmodule Asciinema.Streaming.StreamServer do
   def stop(stream_id, reason \\ :normal), do: GenServer.stop(via_tuple(stream_id), reason)
 
   def get_cast_token(stream_id) do
-    case Registry.lookup(Streaming.Registry, stream_id) do
-      [{pid, _}] -> GenServer.call(pid, :get_cast_token)
-      [] -> nil
+    # Handle case where Registry isn't started (e.g., in tests)
+    try do
+      case Registry.lookup(Streaming.Registry, stream_id) do
+        [{pid, _}] -> GenServer.call(pid, :get_cast_token)
+        [] -> nil
+      end
+    rescue
+      ArgumentError -> nil
     end
   end
 
