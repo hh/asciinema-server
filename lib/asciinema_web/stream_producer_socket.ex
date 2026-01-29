@@ -238,7 +238,12 @@ defmodule AsciinemaWeb.StreamProducerSocket do
   defp ensure_server(stream_id) do
     Logger.info("producer/#{stream_id}: stream went online, starting server")
     {:ok, _pid} = StreamSupervisor.ensure_child(stream_id)
-    :ok = StreamServer.lead(stream_id)
+    {:ok, cast_token} = StreamServer.lead(stream_id)
+
+    if cast_token do
+      Logger.info("producer/#{stream_id}: cast_token allocated: #{cast_token}")
+    end
+
     Process.send_after(self(), :server_heartbeat, @server_heartbeat_interval)
   end
 

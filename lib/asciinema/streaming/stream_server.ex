@@ -96,7 +96,15 @@ defmodule Asciinema.Streaming.StreamServer do
   def handle_call(:lead, {pid, _} = _from, state) do
     state = reschedule_shutdown(state)
 
-    {:reply, :ok, %{state | producer: pid}}
+    # Generate cast_token if not currently recording (so client knows URL upfront)
+    state =
+      if state.writer == nil and state.cast_token == nil do
+        %{state | cast_token: Crypto.random_token(16)}
+      else
+        state
+      end
+
+    {:reply, {:ok, state.cast_token}, %{state | producer: pid}}
   end
 
   def handle_call(:get_cast_token, _from, state) do
@@ -357,6 +365,7 @@ defmodule Asciinema.Streaming.StreamServer do
     else
       state
       |> end_recording()
+      |> Map.put(:cast_token, Crypto.random_token(16))  # New token for new recording
       |> start_recording(cols, rows, term_init, theme)
     end
   end
@@ -419,8 +428,9 @@ defmodule Asciinema.Streaming.StreamServer do
     mode = recording_mode()
     dvr_mode = mode == :dvr
 
-    # Generate cast_token at recording start so clients can know the eventual URL
-    cast_token = Crypto.random_token(16)
+    # Use cast_token from state (generated on lead call)
+    # or generate one if somehow missing
+    cast_token = state.cast_token || Crypto.random_token(16)
 
     # DVR mode writes directly to persistent storage with sync
     path =
