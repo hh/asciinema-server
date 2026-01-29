@@ -1,7 +1,7 @@
 defmodule Asciinema.Workers.DeleteOldDvrRecordingsTest do
+  use Asciinema.DataCase, async: true
   # TODO: Fix flaky test - path handling issues in CI
   @moduletag :skip
-  use Asciinema.DataCase, async: true
   alias Asciinema.Workers.DeleteOldDvrRecordings
 
   @live_dir Path.join([System.tmp_dir!(), "test_dvr_#{:rand.uniform(100_000)}"])
