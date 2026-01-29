@@ -1,5 +1,6 @@
 defmodule AsciinemaWeb.Api.StreamJSON do
   use AsciinemaWeb, :json
+  alias Asciinema.Streaming.StreamServer
   alias AsciinemaWeb.UrlHelpers
   alias Ecto.Changeset
 
@@ -13,7 +14,7 @@ defmodule AsciinemaWeb.Api.StreamJSON do
     url = url(~p"/s/#{stream}")
     ws_producer_url = UrlHelpers.ws_producer_url(stream)
 
-    %{
+    base = %{
       id: stream.id,
       url: url,
       ws_producer_url: ws_producer_url,
@@ -23,6 +24,12 @@ defmodule AsciinemaWeb.Api.StreamJSON do
       description: stream.description,
       visibility: stream.visibility
     }
+
+    # Add cast_url if there's an active recording session with a cast_token
+    case StreamServer.get_cast_token(stream.id) do
+      nil -> base
+      token -> Map.put(base, :cast_url, url(~p"/a/#{token}"))
+    end
   end
 
   def deleted(_assigns), do: %{}

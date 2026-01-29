@@ -180,14 +180,17 @@ defmodule Asciinema.Recordings do
   end
 
   def create_asciicast(user, %Plug.Upload{filename: filename} = upload, fields \\ %{}) do
+    # Use provided secret_token if present, otherwise generate a new one
+    secret_token = fields[:secret_token] || generate_secret_token()
+
     attrs =
       Map.merge(
         %{
           filename: filename,
           visibility: user.default_recording_visibility,
-          secret_token: generate_secret_token()
+          secret_token: secret_token
         },
-        fields
+        Map.delete(fields, :secret_token)
       )
 
     changeset =

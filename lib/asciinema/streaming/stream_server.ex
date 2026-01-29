@@ -49,6 +49,13 @@ defmodule Asciinema.Streaming.StreamServer do
 
   def stop(stream_id, reason \\ :normal), do: GenServer.stop(via_tuple(stream_id), reason)
 
+  def get_cast_token(stream_id) do
+    case Registry.lookup(Streaming.Registry, stream_id) do
+      [{pid, _}] -> GenServer.call(pid, :get_cast_token)
+      [] -> nil
+    end
+  end
+
   # Callbacks
 
   @impl true
@@ -76,7 +83,8 @@ defmodule Asciinema.Streaming.StreamServer do
       writer: nil,
       shutdown_timer: nil,
       viewer_count: viewer_count,
-      dvr_mode: false
+      dvr_mode: false,
+      cast_token: nil
     }
 
     state = reschedule_shutdown(state)
@@ -89,6 +97,10 @@ defmodule Asciinema.Streaming.StreamServer do
     state = reschedule_shutdown(state)
 
     {:reply, :ok, %{state | producer: pid}}
+  end
+
+  def handle_call(:get_cast_token, _from, state) do
+    {:reply, state.cast_token, state}
   end
 
   def handle_call(_message, {pid1, _}, %{producer: pid2} = state) when pid1 != pid2 do
@@ -379,9 +391,11 @@ defmodule Asciinema.Streaming.StreamServer do
       filename: "stream.cast"
     }
 
+    # Pass pre-allocated cast_token to use as the recording's secret_token
     fields = %{
       stream_id: state.stream_id,
-      user_agent: state.user_agent
+      user_agent: state.user_agent,
+      secret_token: state.cast_token
     }
 
     {:ok, _} = Recordings.create_asciicast(state.stream.user, upload, fields)
@@ -392,7 +406,7 @@ defmodule Asciinema.Streaming.StreamServer do
       File.rm(state.path)
     end
 
-    %{state | path: nil, writer: nil, dvr_mode: false}
+    %{state | path: nil, writer: nil, dvr_mode: false, cast_token: nil}
   end
 
   defp create_asciicast_file(
@@ -404,6 +418,9 @@ defmodule Asciinema.Streaming.StreamServer do
        ) do
     mode = recording_mode()
     dvr_mode = mode == :dvr
+
+    # Generate cast_token at recording start so clients can know the eventual URL
+    cast_token = Crypto.random_token(16)
 
     # DVR mode writes directly to persistent storage with sync
     path =
@@ -430,11 +447,11 @@ defmodule Asciinema.Streaming.StreamServer do
       )
 
     if term_init in [nil, ""] do
-      %{state | path: path, writer: writer, dvr_mode: dvr_mode}
+      %{state | path: path, writer: writer, dvr_mode: dvr_mode, cast_token: cast_token}
     else
       {:ok, writer} = V3.write_event(writer, 0, "o", term_init)
 
-      %{state | path: path, writer: writer, dvr_mode: dvr_mode}
+      %{state | path: path, writer: writer, dvr_mode: dvr_mode, cast_token: cast_token}
     end
   end
 
